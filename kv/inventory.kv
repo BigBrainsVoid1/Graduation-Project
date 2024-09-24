@@ -1,0 +1,114 @@
+ScreenManager:
+    InventoryScreen:
+    SupplierManagement:
+    ViewInventoryScreen:
+    DashboardScreen:
+
+<InventoryScreen>:
+    name: 'inventory'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+        TextInput:
+            id: item_name
+            hint_text: 'Item Name'
+            multiline: False
+
+        TextInput:
+            id: quantity
+            hint_text: 'Quantity'
+            multiline: False
+
+        TextInput:
+            id: price
+            hint_text: 'Price'
+            multiline: False
+
+        Button:
+            text: 'Add Item'
+            on_press: root.add_item()
+
+        Button:
+            text: 'Import Inventory from Excel'
+            on_press: root.import_excel()
+
+        Button:
+            text: 'Export Inventory to Excel'
+            on_press: root.export_excel()
+
+        Button:
+            text: 'Analyze Stock Trends'
+            on_press: root.analyze_stock()
+
+        Button:
+            text: 'View Suppliers'
+            on_press: app.root.current = 'supplier_management'
+
+        Button:
+            text: 'View Inventory'
+            on_press: app.root.current = 'view_inventory'
+
+        Button:
+            text: 'Dashboard'
+            on_press: app.root.current = 'dashboard'
+
+<SupplierManagement>:
+    name: 'supplier_management'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+        TextInput:
+            id: supplier_name
+            hint_text: 'Supplier Name'
+            multiline: False
+
+        TextInput:
+            id: supplier_contact
+            hint_text: 'Supplier Contact'
+            multiline: False
+
+        Button:
+            text: 'Add Supplier'
+            on_press: root.add_supplier()
+
+        Button:
+            text: 'Back to Inventory'
+            on_press: app.root.current = 'inventory'
+
+<ViewInventoryScreen>:
+    name: 'view_inventory'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+        ScrollView:
+            BoxLayout:
+                id: inventory_container
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+
+        Button:
+            text: 'Back to Inventory'
+            on_press: app.root.current = 'inventory'
+
+<DashboardScreen>:
+    name: 'dashboard'
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: "Inventory Dashboard"
+            font_size: 24
+            size_hint_y: None
+            height: 40
+        Button:
+            text: "Update Dashboard"
+            on_press: root.update_dashboard()
+        Button:
+            text: "Back to Inventory"
+            on_press: app.root.current = 'inventory'
