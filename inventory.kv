@@ -1,114 +1,140 @@
 ScreenManager:
+    transition: FadeTransition()
     InventoryScreen:
-    SupplierManagement:
+        name: "inventory"
     ViewInventoryScreen:
+        name: "view_inventory"
+    SupplierManagement:
+        name: "suppliers"
     DashboardScreen:
+        name: "dashboard"
 
 <InventoryScreen>:
-    name: 'inventory'
     BoxLayout:
-        orientation: 'vertical'
-        padding: 20
+        orientation: "vertical"
+        padding: 10
         spacing: 10
+
+        Label:
+            text: "Add New Item"
+            font_size: 20
 
         TextInput:
             id: item_name
-            hint_text: 'Item Name'
-            multiline: False
+            hint_text: "Item Name"
 
         TextInput:
             id: quantity
-            hint_text: 'Quantity'
-            multiline: False
+            hint_text: "Quantity"
+            input_filter: "int"
 
         TextInput:
             id: price
-            hint_text: 'Price'
-            multiline: False
+            hint_text: "Price"
+            input_filter: "float"
+
+        TextInput:
+            id: barcode
+            hint_text: "Barcode (leave empty to scan)"
+
+        TextInput:
+            id: location
+            hint_text: "Location"
+
+        TextInput:
+            id: condition
+            hint_text: "Condition (New/Used)"
 
         Button:
-            text: 'Add Item'
+            text: "Scan RFID Tag"
+            on_press: root.scan_rfid_tag()
+
+        Button:
+            text: "Add Item"
             on_press: root.add_item()
 
         Button:
-            text: 'Import Inventory from Excel'
+            text: "Import Inventory from Excel"
             on_press: root.import_excel()
 
         Button:
-            text: 'Export Inventory to Excel'
+            text: "Export Inventory to Excel"
             on_press: root.export_excel()
 
         Button:
-            text: 'Analyze Stock Trends'
-            on_press: root.analyze_stock()
-
-        Button:
-            text: 'View Suppliers'
-            on_press: app.root.current = 'supplier_management'
-
-        Button:
-            text: 'View Inventory'
-            on_press: app.root.current = 'view_inventory'
-
-        Button:
-            text: 'Dashboard'
-            on_press: app.root.current = 'dashboard'
-
-<SupplierManagement>:
-    name: 'supplier_management'
-    BoxLayout:
-        orientation: 'vertical'
-        padding: 20
-        spacing: 10
-
-        TextInput:
-            id: supplier_name
-            hint_text: 'Supplier Name'
-            multiline: False
-
-        TextInput:
-            id: supplier_contact
-            hint_text: 'Supplier Contact'
-            multiline: False
-
-        Button:
-            text: 'Add Supplier'
-            on_press: root.add_supplier()
-
-        Button:
-            text: 'Back to Inventory'
-            on_press: app.root.current = 'inventory'
+            text: "Go to Inventory List"
+            on_press: app.root.current = "view_inventory"
 
 <ViewInventoryScreen>:
-    name: 'view_inventory'
     BoxLayout:
-        orientation: 'vertical'
-        padding: 20
+        orientation: "vertical"
+        padding: 10
         spacing: 10
 
         ScrollView:
             BoxLayout:
                 id: inventory_container
-                orientation: 'vertical'
+                orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
 
         Button:
-            text: 'Back to Inventory'
-            on_press: app.root.current = 'inventory'
+            text: "Go to Add Item"
+            on_press: app.root.current = "inventory"
+
+<SupplierManagement>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+
+        Label:
+            text: "Manage Suppliers"
+            font_size: 20
+
+        TextInput:
+            id: supplier_name
+            hint_text: "Supplier Name"
+
+        TextInput:
+            id: supplier_contact
+            hint_text: "Supplier Contact"
+
+        Button:
+            text: "Add Supplier"
+            on_press: root.add_supplier()
+
+        ScrollView:
+            BoxLayout:
+                id: suppliers_container
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+
+        Button:
+            text: "Go to Dashboard"
+            on_press: app.root.current = "dashboard"
 
 <DashboardScreen>:
-    name: 'dashboard'
     BoxLayout:
-        orientation: 'vertical'
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+
         Label:
-            text: "Inventory Dashboard"
-            font_size: 24
+            text: "Dashboard"
+            font_size: 20
+
+        BoxLayout:
+            id: dashboard_container
+            orientation: "vertical"
+
+        Image:
+            id: pie_chart
+            source: ""
             size_hint_y: None
-            height: 40
+            height: 300
+
         Button:
-            text: "Update Dashboard"
-            on_press: root.update_dashboard()
-        Button:
-            text: "Back to Inventory"
-            on_press: app.root.current = 'inventory'
+            text: "Go to Inventory"
+            on_press: app.root.current = "inventory"
