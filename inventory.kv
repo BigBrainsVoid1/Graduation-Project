@@ -20,11 +20,13 @@ ScreenManager:
             id: quantity
             hint_text: 'Quantity'
             multiline: False
+            input_filter: 'int'  # Optional to filter only integers
 
         TextInput:
             id: price
             hint_text: 'Price'
             multiline: False
+            input_filter: 'float'  # Optional to filter for numbers with decimals
 
         Button:
             text: 'Add Item'
@@ -101,14 +103,19 @@ ScreenManager:
     name: 'dashboard'
     BoxLayout:
         orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
         Label:
             text: "Inventory Dashboard"
             font_size: 24
             size_hint_y: None
             height: 40
+
         Button:
             text: "Update Dashboard"
             on_press: root.update_dashboard()
+
         Button:
             text: "Back to Inventory"
             on_press: app.root.current = 'inventory'
