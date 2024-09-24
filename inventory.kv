@@ -25,29 +25,13 @@ ScreenManager:
 
         TextInput:
             id: quantity
-            hint_text: "Quantity"
-            input_filter: "int"
+            hint_text: 'Quantity'
+            multiline: False
 
         TextInput:
             id: price
-            hint_text: "Price"
-            input_filter: "float"
-
-        TextInput:
-            id: barcode
-            hint_text: "Barcode (leave empty to scan)"
-
-        TextInput:
-            id: location
-            hint_text: "Location"
-
-        TextInput:
-            id: condition
-            hint_text: "Condition (New/Used)"
-
-        Button:
-            text: "Scan RFID Tag"
-            on_press: root.scan_rfid_tag()
+            hint_text: 'Price'
+            multiline: False
 
         Button:
             text: "Add Item"
@@ -117,10 +101,7 @@ ScreenManager:
 
 <DashboardScreen>:
     BoxLayout:
-        orientation: "vertical"
-        padding: 10
-        spacing: 10
-
+        orientation: 'vertical'
         Label:
             text: "Dashboard"
             font_size: 20
@@ -133,8 +114,10 @@ ScreenManager:
             id: pie_chart
             source: ""
             size_hint_y: None
-            height: 300
-
+            height: 40
         Button:
-            text: "Go to Inventory"
-            on_press: app.root.current = "inventory"
+            text: "Update Dashboard"
+            on_press: root.update_dashboard()
+        Button:
+            text: "Back to Inventory"
+            on_press: app.root.current = 'inventory'

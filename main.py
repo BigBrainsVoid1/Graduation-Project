@@ -92,6 +92,7 @@ class InventoryScreen(Screen):
         location = self.ids.location.text.strip()
         condition = self.ids.condition.text.strip()
 
+<<<<<<< HEAD
         if not item_name or not quantity.isdigit() or not price or not location or not condition:
             show_popup("Error", "All fields are required.")
             return
@@ -113,6 +114,20 @@ class InventoryScreen(Screen):
             App.get_running_app().root.current = "view_inventory"
         except sqlite3.IntegrityError:
             show_popup("Error", "Barcode already exists.")
+=======
+            # Input validation
+            if item_name and quantity.isdigit() and price.replace('.', '', 1).isdigit():
+                c.execute("INSERT INTO inventory (item_name, quantity, price, location, condition, last_updated) VALUES (?, ?, ?, ?, ?, ?)", 
+                          (item_name, int(quantity), float(price), location, condition, last_updated))
+                conn.commit()
+                show_popup("Success", "Item Added Successfully")
+                self.ids.item_name.text = ''
+                self.ids.quantity.text = ''
+                self.ids.price.text = ''
+
+            else:
+                show_popup("Error", "Invalid Input. Ensure quantity is a number and price is a valid decimal.")
+>>>>>>> 6c44879c553f0fd5a422195abae2fae4bc676411
         except Exception as e:
             show_popup("Error", f"Failed to add item: {str(e)}")
 

@@ -25,6 +25,7 @@ ScreenManager:
 
         TextInput:
             id: quantity
+<<<<<<< HEAD
             hint_text: "Quantity"
             input_filter: "int"
 
@@ -44,6 +45,17 @@ ScreenManager:
         TextInput:
             id: condition
             hint_text: "Condition (New/Used)"
+=======
+            hint_text: 'Quantity'
+            multiline: False
+            input_filter: 'int'  # Optional to filter only integers
+
+        TextInput:
+            id: price
+            hint_text: 'Price'
+            multiline: False
+            input_filter: 'float'  # Optional to filter for numbers with decimals
+>>>>>>> 6c44879c553f0fd5a422195abae2fae4bc676411
 
         Button:
             text: "Scan RFID Tag"
@@ -117,8 +129,13 @@ ScreenManager:
 
 <DashboardScreen>:
     BoxLayout:
+<<<<<<< HEAD
         orientation: "vertical"
         padding: 10
+=======
+        orientation: 'vertical'
+        padding: 20
+>>>>>>> 6c44879c553f0fd5a422195abae2fae4bc676411
         spacing: 10
 
         Label:
@@ -133,8 +150,20 @@ ScreenManager:
             id: pie_chart
             source: ""
             size_hint_y: None
+<<<<<<< HEAD
             height: 300
 
         Button:
             text: "Go to Inventory"
             on_press: app.root.current = "inventory"
+=======
+            height: 40
+
+        Button:
+            text: "Update Dashboard"
+            on_press: root.update_dashboard()
+
+        Button:
+            text: "Back to Inventory"
+            on_press: app.root.current = 'inventory'
+>>>>>>> 6c44879c553f0fd5a422195abae2fae4bc676411
