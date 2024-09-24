@@ -43,6 +43,10 @@ class InventoryScreen(Screen):
                           (item_name, int(quantity), float(price), location, condition, last_updated))
                 conn.commit()
                 show_popup("Success", "Item Added Successfully")
+                self.ids.item_name.text = ''
+                self.ids.quantity.text = ''
+                self.ids.price.text = ''
+
             else:
                 show_popup("Error", "Invalid Input. Ensure quantity is a number and price is a valid decimal.")
         except Exception as e:
