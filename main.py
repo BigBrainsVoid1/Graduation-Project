@@ -1,168 +1,240 @@
+import kivy
 from kivy.app import App
-from kivy.uix.screenmanager import Screen, ScreenManager
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
+from kivy.uix.button import Button
 from kivy.lang import Builder
 import sqlite3
-import pandas as pd
+import smtplib
+from email.mime.text import MIMEText
+import os
+from random import randint
 import random
-from datetime import datetime
 import matplotlib.pyplot as plt
-from kivy.uix.boxlayout import BoxLayout
 
-# Database connection setup
-conn = sqlite3.connect("inventory.db")
-c = conn.cursor()
 
-# Create tables if they do not exist
-c.execute('''CREATE TABLE IF NOT EXISTS inventory
-             (item_name TEXT, quantity INTEGER, price REAL, location TEXT, condition TEXT, last_updated TEXT)''')
-c.execute('''CREATE TABLE IF NOT EXISTS suppliers
-             (supplier_name TEXT, contact TEXT)''')
-conn.commit()
+# Placeholder for RFID tracking
+def get_rfid_data():
+    try:
+        # Simulate RFID data
+        return {"item1": "Aisle 4", "item2": "Aisle 7", "item3": "Aisle 12"}
+    except Exception as e:
+        print(f"Error retrieving RFID data: {e}")
+        return {}
 
-# Helper function to show popups
-def show_popup(title, message):
-    popup = Popup(title=title, content=Label(text=message), size_hint=(0.6, 0.3))
-    popup.open()
 
-# Inventory Management with Real-Time Monitoring
+# Placeholder for sensor readings (temperature, humidity, etc.)
+def get_sensor_data():
+    try:
+        return {"temperature": 22, "humidity": 50, "weight": random.uniform(10, 50)}
+    except Exception as e:
+        print(f"Error retrieving sensor data: {e}")
+        return {}
+
+
+# Email alert system
+def send_alert_via_email(message):
+    sender = "inventory.alerts@example.com"
+    receiver = "user@example.com"
+    msg = MIMEText(message)
+    msg["Subject"] = "Inventory Alert"
+    msg["From"] = sender
+    msg["To"] = receiver
+
+    try:
+        smtp = smtplib.SMTP('smtp.example.com')
+        smtp.sendmail(sender, [receiver], msg.as_string())
+        smtp.quit()
+        print("Alert sent successfully!")
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+
+# Initialize the database
+def init_db():
+    try:
+        conn = sqlite3.connect('inventory.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            item_name TEXT,
+                            stock INTEGER,
+                            condition TEXT,
+                            image_path TEXT
+                        )''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS suppliers (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            supplier_name TEXT,
+                            contact_info TEXT
+                        )''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS reports (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            report_date TEXT,
+                            report_details TEXT
+                        )''')
+
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully!")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+
+
+# Inventory Screen
 class InventoryScreen(Screen):
-    def add_item(self):
+    def check_alerts(self):
         try:
-            item_name = self.ids.item_name.text
-            quantity = self.ids.quantity.text
-            price = self.ids.price.text
-            location = "Warehouse 1"  # Can be dynamic for multi-location
-            condition = "New"
-            last_updated = str(datetime.now())
+            conn = sqlite3.connect('inventory.db')
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM inventory WHERE stock < 5")
+            low_stock_items = cursor.fetchall()
+            conn.close()
 
-            # Input validation
-            if item_name and quantity.isdigit() and price.replace('.', '', 1).isdigit():
-                c.execute("INSERT INTO inventory (item_name, quantity, price, location, condition, last_updated) VALUES (?, ?, ?, ?, ?, ?)", 
-                          (item_name, int(quantity), float(price), location, condition, last_updated))
-                conn.commit()
-                show_popup("Success", "Item Added Successfully")
-                self.ids.item_name.text = ''
-                self.ids.quantity.text = ''
-                self.ids.price.text = ''
-
+            if low_stock_items:
+                alert_text = "\n".join([f"Item: {item[1]}, Stock: {item[2]}" for item in low_stock_items])
+                self.show_popup("Low Stock Alert", alert_text)
+                send_alert_via_email(alert_text)
             else:
-                show_popup("Error", "Invalid Input. Ensure quantity is a number and price is a valid decimal.")
+                self.show_popup("No Alerts", "All inventory items are sufficiently stocked.")
         except Exception as e:
-            show_popup("Error", f"Failed to Add Item: {str(e)}")
+            print(f"Error checking alerts: {e}")
 
-    def import_excel(self):
+    def show_popup(self, title, content):
         try:
-            data = pd.read_excel("inventory_import.xlsx")
-            for index, row in data.iterrows():
-                c.execute("INSERT INTO inventory (item_name, quantity, price, location, condition, last_updated) VALUES (?, ?, ?, ?, ?, ?)", 
-                          (row['item_name'], row['quantity'], row['price'], row['location'], row['condition'], str(datetime.now())))
-            conn.commit()
-            show_popup("Success", "Inventory Imported")
-        except FileNotFoundError:
-            show_popup("Error", "File not found. Make sure 'inventory_import.xlsx' exists.")
+            popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+            popup.open()
         except Exception as e:
-            show_popup("Error", f"Failed to Import: {str(e)}")
-    
-    def export_excel(self):
+            print(f"Error showing popup: {e}")
+
+    def real_time_rfid_tracking(self):
         try:
-            c.execute("SELECT * FROM inventory")
-            data = c.fetchall()
-            df = pd.DataFrame(data, columns=["item_name", "quantity", "price", "location", "condition", "last_updated"])
-            df.to_excel("inventory_export.xlsx", index=False)
-            show_popup("Success", "Inventory Exported")
+            rfid_data = get_rfid_data()
+            rfid_map = "\n".join([f"{item}: {location}" for item, location in rfid_data.items()])
+            self.show_popup("Real-Time RFID Tracking", rfid_map)
         except Exception as e:
-            show_popup("Error", f"Failed to Export: {str(e)}")
+            print(f"Error in RFID tracking: {e}")
 
-    def analyze_stock(self):
-        try:
-            # Generate a sales trend report using matplotlib
-            c.execute("SELECT item_name, SUM(quantity) FROM inventory GROUP BY item_name")
-            data = c.fetchall()
-            if not data:
-                show_popup("Error", "No data available for analysis.")
-                return
 
-            item_names = [x[0] for x in data]
-            quantities = [x[1] for x in data]
+class SupplierScreen(Screen):
+    supplier_name = None
+    supplier_contact = None
 
-            plt.bar(item_names, quantities)
-            plt.xlabel("Item Names")
-            plt.ylabel("Total Stock Quantity")
-            plt.title("Inventory Stock Analysis")
-            plt.show()
-        except Exception as e:
-            show_popup("Error", f"Failed to Analyze Stock: {str(e)}")
-
-class SupplierManagement(Screen):
     def add_supplier(self):
         try:
-            supplier_name = self.ids.supplier_name.text
-            supplier_contact = self.ids.supplier_contact.text
+            name = self.supplier_name.text
+            contact = self.supplier_contact.text
 
-            if supplier_name and supplier_contact:
-                c.execute("INSERT INTO suppliers (supplier_name, contact) VALUES (?, ?)", (supplier_name, supplier_contact))
+            if name and contact:
+                conn = sqlite3.connect('inventory.db')
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO suppliers (supplier_name, contact_info) VALUES (?, ?)", (name, contact))
                 conn.commit()
-                show_popup("Success", "Supplier Added Successfully")
+                conn.close()
+
+                self.show_popup("Success", "Supplier added successfully.")
+                self.supplier_name.text = ""
+                self.supplier_contact.text = ""
             else:
-                show_popup("Error", "Invalid Input. Please enter both supplier name and contact.")
+                self.show_popup("Error", "Please enter both supplier name and contact information.")
         except Exception as e:
-            show_popup("Error", f"Failed to Add Supplier: {str(e)}")
+            print(f"Error adding supplier: {e}")
 
-class ViewInventoryScreen(Screen):
-    def on_enter(self):
+    def show_popup(self, title, content):
         try:
-            self.ids.inventory_container.clear_widgets()
-            c.execute("SELECT * FROM inventory")
-            items = c.fetchall()
-            if not items:
-                show_popup("Info", "No items found in the inventory.")
-                return
-
-            for item in items:
-                item_label = Label(text=f"{item[0]} - {item[1]} units - ${item[2]} - {item[3]} - {item[4]} - Last Updated: {item[5]}")
-                self.ids.inventory_container.add_widget(item_label)
+            popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+            popup.open()
         except Exception as e:
-            show_popup("Error", f"Failed to Load Inventory: {str(e)}")
+            print(f"Error showing popup: {e}")
 
-class DashboardScreen(Screen):
-    def __init__(self, **kwargs):
-        super(DashboardScreen, self).__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical')
-        self.add_widget(self.layout)
-        self.update_dashboard()
 
-    def update_dashboard(self):
+class AnalyticsScreen(Screen):
+    def generate_graphs(self):
         try:
-            self.layout.clear_widgets()
-            c.execute("SELECT item_name, quantity FROM inventory")
-            items = c.fetchall()
+            items = ["Item A", "Item B", "Item C", "Item D"]
+            stock = [20, 15, 7, 3]
 
-            summary_label = Label(text=f"Total Items: {len(items)}")
-            self.layout.add_widget(summary_label)
-
-            if not items:
-                show_pop("Info", "No inventory data available.")
-                return
-
-            item_names = [x[0] for x in items]
-            quantities = [x[1] for x in items]
-
-            # Create a pie chart of inventory distribution
-            plt.figure(fupigsize=(10, 6))
-            plt.pie(quantities, labels=item_names, autopct='%1.1f%%')
-            plt.title("Inventory Distribution")
+            plt.bar(items, stock)
+            plt.xlabel('Items')
+            plt.ylabel('Stock')
+            plt.title('Stock Levels of Inventory')
             plt.show()
         except Exception as e:
-            show_popup("Error", f"Failed to Update Dashboard: {str(e)}")
+            print(f"Error generating graphs: {e}")
 
-class MyInventoryApp(App):
+    def show_popup(self, title, content):
+        try:
+            popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+            popup.open()
+        except Exception as e:
+            print(f"Error showing popup: {e}")
+
+
+class DailyReportScreen(Screen):
+    def generate_daily_report(self):
+        try:
+            self.show_popup("Daily Report", "Generating daily inventory report...")
+        except Exception as e:
+            print(f"Error generating daily report: {e}")
+
+    def show_popup(self, title, content):
+        try:
+            popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+            popup.open()
+        except Exception as e:
+            print(f"Error showing popup: {e}")
+
+
+class ImportExportScreen(Screen):
+    def export_data(self):
+        try:
+            self.show_popup("Export Data", "Exporting inventory data...")
+        except Exception as e:
+            print(f"Error exporting data: {e}")
+
+    def import_data(self):
+        try:
+            self.show_popup("Import Data", "Importing data from external sources...")
+        except Exception as e:
+            print(f"Error importing data: {e}")
+
+    def show_popup(self, title, content):
+        try:
+            popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+            popup.open()
+        except Exception as e:
+            print(f"Error showing popup: {e}")
+
+
+class WindowManager(ScreenManager):
+    pass
+
+
+class InventoryApp(App):
     def build(self):
         try:
-            return Builder.load_file('inventory.kv')
-        except Exception as e:
-            show_popup("Error", f"Failed to Load App: {str(e)}")
+            init_db()  # Initialize database
+            sm = WindowManager()
+            
+            # Add screens to the ScreenManager
+            sm.add_widget(InventoryScreen(name='inventory'))
+            sm.add_widget(SupplierScreen(name='supplier'))
+            sm.add_widget(AnalyticsScreen(name='analytics'))
+            sm.add_widget(DailyReportScreen(name='daily_report'))
+            sm.add_widget(ImportExportScreen(name='import_export'))
 
-if __name__ == '__main__':
-    MyInventoryApp().run()
+            sm.current = 'inventory'  # Set initial screen to 'inventory'
+            return sm
+        except Exception as e:
+            print(f"Error during app build: {e}")
+
+
+if __name__ == "__main__":
+    try:
+        InventoryApp().run()
+    except Exception as e:
+        print(f"Error running the app: {e}")
