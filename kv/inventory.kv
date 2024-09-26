@@ -1,86 +1,115 @@
-WindowManager:
-    InventoryScreen:
-    SupplierScreen:
-    AnalyticsScreen:
-    DailyReportScreen:
-    ImportExportScreen:
-
-<InventoryScreen>:
-    name: 'inventory'
-    BoxLayout:
-        orientation: 'vertical'
-        Button:
-            text: 'Check Inventory Alerts'
-            on_press: root.check_alerts()
-        Button:
-            text: 'Real-Time RFID Tracking'
-            on_press: root.real_time_rfid_tracking()
-        Button:
-            text: 'Go to Suppliers'
-            on_press: app.root.current = 'supplier'
-        Button:
-            text: 'Generate Analytics Graphs'
-            on_press: app.root.current = 'analytics'
-        Button:
-            text: 'Daily Report'
-            on_press: app.root.current = 'daily_report'
-        Button:
-            text: 'Import/Export Data'
-            on_press: app.root.current = 'import_export'
-
-<SupplierScreen>:
-    name: 'supplier'
-    supplier_name: supplier_name
-    supplier_contact: supplier_contact
-    BoxLayout:
-        orientation: 'vertical'
+<LoginScreen>:
+    GridLayout:
+        cols: 2
+        rows: 3
         Label:
-            text: 'Add New Supplier'
+            text: "Username"
         TextInput:
-            id: supplier_name
-            hint_text: 'Supplier Name'
+            id: username
+            multiline: False
+        Label:
+            text: "Password"
         TextInput:
-            id: supplier_contact
-            hint_text: 'Contact Information'
+            id: password
+            multiline: False
+            password: True
         Button:
-            text: 'Add Supplier'
-            on_press: root.add_supplier()
+            text: "Login"
+            on_press: root.login_user()
         Button:
-            text: 'Back to Inventory'
+            text: "Register"
+            on_press: app.root.current = 'register'
+
+<RegisterScreen>:
+    GridLayout:
+        cols: 2
+        rows: 4
+        Label:
+            text: "Username"
+        TextInput:
+            id: reg_username
+            multiline: False
+        Label:
+            text: "Password"
+        TextInput:
+            id: reg_password
+            multiline: False
+            password: True
+        Button:
+            text: "Register"
+            on_press: root.register_user()
+        Button:
+            text: "Back to Login"
+            on_press: app.root.current = 'login'
+
+<ManageInventoryScreen>:
+    GridLayout:
+        cols: 2
+        rows: 8
+        Label:
+            text: "Item Name"
+        TextInput:
+            id: item_name
+            multiline: False
+        Label:
+            text: "Stock"
+        TextInput:
+            id: stock
+            multiline: False
+        Label:
+            text: "Condition"
+        TextInput:
+            id: condition
+            multiline: False
+        Label:
+            text: "RFID Tag"
+        TextInput:
+            id: rfid_tag
+            multiline: False
+        Button:
+            text: "Add Item"
+            on_press: root.add_item()
+        Button:
+            text: "View Items"
+            on_press: root.view_items()
+        Label:
+            text: "Search Inventory"
+        TextInput:
+            id: search_input
+            multiline: False
+        Button:
+            text: "Search"
+            on_press: root.search_item()
+        FileChooserIconView:
+            on_selection: root.import_items(self.selection[0])
+        Button:
+            text: "Export Inventory"
+            on_press: root.export_items()
+
+<SupplierMarketplaceScreen>:
+    GridLayout:
+        cols: 1
+        rows: 3
+        Button:
+            text: "Load Suppliers"
+            on_press: root.load_suppliers()
+        Button:
+            text: "Approve Best Supplier"
+            on_press: root.approve_best_supplier()
+        Button:
+            text: "Back to Inventory"
             on_press: app.root.current = 'inventory'
 
-<AnalyticsScreen>:
-    name: 'analytics'
-    BoxLayout:
-        orientation: 'vertical'
+<ReportingScreen>:
+    GridLayout:
+        cols: 1
+        rows: 3
         Button:
-            text: 'Generate Stock Graphs'
-            on_press: root.generate_graphs()
+            text: "Generate Reports"
+            on_press: root.generate_reports()
         Button:
-            text: 'Back to Inventory'
-            on_press: app.root.current = 'inventory'
-
-<DailyReportScreen>:
-    name: 'daily_report'
-    BoxLayout:
-        orientation: 'vertical'
+            text: "Print Reports"
+            on_press: root.print_report()
         Button:
-            text: 'Generate Daily Report'
-            on_press: root.generate_daily_report()
-        Button:
-            text: 'Back to Inventory'
-            on_press: app.root.current = 'inventory'
-
-<ImportExportScreen>:
-    name: 'import_export'
-    BoxLayout:
-        orientation: 'vertical'
-        Button:
-            text: 'Export Data'
-            on_press: root.export_data()
-        Button:
-            text: 'Import Data'
-            on_press: root.import_data()
-        Button:
-            text: 'Back to Inventory'
+            text: "Back to Inventory"
             on_press: app.root.current = 'inventory'
