@@ -9,6 +9,10 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.image import Image
+from kivy.core.image import Image as CoreImage
+from kivy.clock import Clock
+from io import BytesIO
 import sqlite3
 import random
 import hashlib
@@ -16,9 +20,6 @@ import smtplib
 from email.mime.text import MIMEText
 import matplotlib.pyplot as plt
 import pandas as pd
-from kivy.uix.widget import Widget
-from kivy.clock import Clock
-from io import BytesIO
 import csv
 from datetime import datetime, timedelta
 
@@ -32,18 +33,25 @@ def get_sensor_data():
 
 # Email alert system
 def send_alert_via_email(message):
-    sender = "inventory.alerts@example.com"
-    receiver = "user@example.com"
-    msg = MIMEText(message)
-    msg["Subject"] = "Inventory Alert"
-    msg["From"] = sender
-    msg["To"] = receiver
-
     try:
-        smtp = smtplib.SMTP('smtp.example.com')
-        smtp.sendmail(sender, [receiver], msg.as_string())
-        smtp.quit()
-        print("Alert sent successfully!")
+        smtp_server = 'smtp.example.com'  # Replace with actual server
+        smtp_port = 587  # Replace with actual port
+        sender_email = "your_email@example.com"
+        sender_password = "your_password"
+        recipient_email = "recipient_email@example.com"
+
+        msg = MIMEText(message)
+        msg['Subject'] = 'Inventory Alert'
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        server.quit()
+
+        print("Email sent successfully!")
     except Exception as e:
         print(f"Error sending email: {e}")
 
@@ -51,11 +59,11 @@ def send_alert_via_email(message):
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Initialize the database
 def init_db():
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
 
+    # Create the users, inventory, contracts, and logs tables as usual
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT UNIQUE,
@@ -71,15 +79,6 @@ def init_db():
                         rfid_tag TEXT UNIQUE
                     )''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS suppliers (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        supplier_name TEXT,
-                        contact TEXT,
-                        order_history TEXT,
-                        performance_rating INTEGER,
-                        bidding_price REAL
-                    )''')
-
     cursor.execute('''CREATE TABLE IF NOT EXISTS contracts (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         supplier_id INTEGER,
@@ -93,15 +92,45 @@ def init_db():
                         action TEXT,
                         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                     )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'user'  -- Assuming a default role
+                    )''')
+
+    # Check and modify the suppliers table if necessary
+    try:
+        cursor.execute('''ALTER TABLE suppliers ADD COLUMN performance_rating INTEGER''')
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
+
+    try:
+        cursor.execute('''ALTER TABLE suppliers ADD COLUMN order_history TEXT''')
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
+
+    try:
+        cursor.execute('''ALTER TABLE suppliers ADD COLUMN bidding_price REAL''')
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
 
     conn.commit()
     conn.close()
 
-# Load suppliers with random data
+def column_exists(cursor, table_name, column_name):
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    return any(column[1] == column_name for column in cursor.fetchall())
+
 def load_suppliers():
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
 
+    # List of suppliers with optional columns
     suppliers = [
         ("Supplier 1", "supplier1@example.com", "100 orders", 5, 1000.00),
         ("Supplier 2", "supplier2@example.com", "200 orders", 4, 1100.00),
@@ -109,8 +138,25 @@ def load_suppliers():
         ("Supplier 4", "supplier4@example.com", "250 orders", 3, 950.00)
     ]
 
+    # Check for columns before inserting
     for supplier in suppliers:
-        cursor.execute("INSERT INTO suppliers (supplier_name, contact, order_history, performance_rating, bidding_price) VALUES (?, ?, ?, ?, ?)", supplier)
+        query = "INSERT INTO suppliers (supplier_name, contact"
+        values = [supplier[0], supplier[1]]
+        
+        if column_exists(cursor, 'suppliers', 'order_history'):
+            query += ", order_history"
+            values.append(supplier[2])
+        
+        if column_exists(cursor, 'suppliers', 'performance_rating'):
+            query += ", performance_rating"
+            values.append(supplier[3])
+        
+        if column_exists(cursor, 'suppliers', 'bidding_price'):
+            query += ", bidding_price"
+            values.append(supplier[4])
+
+        query += ") VALUES (" + ', '.join(['?'] * len(values)) + ")"
+        cursor.execute(query, values)
 
     conn.commit()
     conn.close()
@@ -136,16 +182,35 @@ def load_sample_inventory():
     ]
 
     for item in inventory_data:
-        cursor.execute("INSERT INTO inventory (item_name, stock, condition, rfid_tag) VALUES (?, ?, ?, ?)", item)
+        query = "INSERT INTO inventory (item_name"
+        values = [item[0]]
+        
+        # Check if 'stock' column exists
+        if column_exists(cursor, 'inventory', 'stock'):
+            query += ", stock"
+            values.append(item[1])
+        
+        # Check if 'condition' column exists
+        if column_exists(cursor, 'inventory', 'condition'):
+            query += ", condition"
+            values.append(item[2])
+        
+        # Check if 'rfid_tag' column exists
+        if column_exists(cursor, 'inventory', 'rfid_tag'):
+            query += ", rfid_tag"
+            values.append(item[3])
+        
+        query += ") VALUES (" + ', '.join(['?'] * len(values)) + ")"
+        cursor.execute(query, values)
 
     conn.commit()
     conn.close()
 
 # Report generation with sample historical data
 def generate_reports():
-    dates = [datetime.now() - timedelta(days=30*i) for i in range(4)]
+    # Adjust this to use only the columns you know exist
     data = {
-        'Date': dates,
+        'Date': [datetime.now() - timedelta(days=i) for i in range(4)],
         'TV Screens': [100, 85, 75, 60],
         'Computers': [1000, 950, 900, 850],
         'Laptops': [200, 180, 150, 120],
@@ -154,7 +219,7 @@ def generate_reports():
     
     df = pd.DataFrame(data)
     df.set_index('Date', inplace=True)
-    
+
     fig, ax = plt.subplots(figsize=(10, 6))
     df.plot(ax=ax)
     plt.title("Inventory Levels Over Time")
@@ -162,8 +227,15 @@ def generate_reports():
     plt.savefig('report_graph.png')
     return df
 
+
+# Base Screen class with reusable popup
+class BaseScreen(Screen):
+    def show_popup(self, title, content):
+        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
+        popup.open()
+
 # Login Screen
-class LoginScreen(Screen):
+class LoginScreen(BaseScreen):
     def login_user(self):
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
@@ -179,12 +251,8 @@ class LoginScreen(Screen):
         else:
             self.show_popup("Login Failed", "Invalid username or password")
 
-    def show_popup(self, title, content):
-        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
-        popup.open()
-
 # Register Screen
-class RegisterScreen(Screen):
+class RegisterScreen(BaseScreen):
     def register_user(self):
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
@@ -198,12 +266,8 @@ class RegisterScreen(Screen):
         except sqlite3.IntegrityError:
             self.show_popup("Registration Failed", "Username already exists")
 
-    def show_popup(self, title, content):
-        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
-        popup.open()
-
-# Inventory Management Screen (Unified Manage Inventory Page)
-class ManageInventoryScreen(Screen):
+# Inventory Management Screen
+class ManageInventoryScreen(BaseScreen):
     def add_item(self):
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
@@ -211,158 +275,41 @@ class ManageInventoryScreen(Screen):
         stock = self.ids.stock.text
         condition = self.ids.condition.text
         rfid_tag = self.ids.rfid_tag.text
-        cursor.execute("INSERT INTO inventory (item_name, stock, condition, rfid_tag) VALUES (?, ?, ?, ?)", (item_name, stock, condition, rfid_tag))
-        conn.commit()
-        conn.close()
-        self.show_popup("Success", "Item added successfully")
-
-    def view_items(self):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM inventory")
-        items = cursor.fetchall()
-        conn.close()
-
-        content = ScrollView()
-        layout = GridLayout(cols=1, padding=10, size_hint_y=None)
-        layout.bind(minimum_height=layout.setter('height'))
-        for item in items:
-            item_label = Label(text=f"ID: {item[0]} | Name: {item[1]} | Stock: {item[2]} | Condition: {item[3]} | RFID: {item[4]}")
-            layout.add_widget(item_label)
-        content.add_widget(layout)
-
-        popup = Popup(title="Inventory Items", content=content, size_hint=(0.85, 0.75))
-        popup.open()
-
-    def search_item(self):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        item_name = self.ids.search_input.text
-        cursor.execute("SELECT * FROM inventory WHERE item_name=?", (item_name,))
-        item = cursor.fetchone()
-        conn.close()
-
-        if item:
-            self.show_popup("Item Found", f"ID: {item[0]} | Name: {item[1]} | Stock: {item[2]} | Condition: {item[3]} | RFID: {item[4]}")
-        else:
-            self.show_popup("Item Not Found", "No item found with that name")
-
-    def import_items(self, path):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-
-        with open(path, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                cursor.execute("INSERT INTO inventory (item_name, stock, condition, rfid_tag) VALUES (?, ?, ?, ?)", (row['item_name'], row['stock'], row['condition'], row['rfid_tag']))
-
-        conn.commit()
-        conn.close()
-        self.show_popup("Success", "Items imported successfully")
-
-    def export_items(self):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM inventory")
-        items = cursor.fetchall()
-
-        with open('inventory_export.csv', 'w', newline='') as csvfile:
-            fieldnames = ['ID', 'Item Name', 'Stock', 'Condition', 'RFID Tag']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for item in items:
-                writer.writerow({'ID': item[0], 'Item Name': item[1], 'Stock': item[2], 'Condition': item[3], 'RFID Tag': item[4]})
-
-        conn.close()
-        self.show_popup("Success", "Items exported successfully")
-
-    def show_popup(self, title, content):
-        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
-        popup.open()
-
-# Supplier Marketplace Screen
-class SupplierMarketplaceScreen(Screen):
-    def load_suppliers(self):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM suppliers")
-        suppliers = cursor.fetchall()
-        conn.close()
-
-        content = ScrollView()
-        layout = GridLayout(cols=1, padding=10, size_hint_y=None)
-        layout.bind(minimum_height=layout.setter('height'))
-        for supplier in suppliers:
-            supplier_info = f"Name: {supplier[1]} | Contact: {supplier[2]} | History: {supplier[3]} | Rating: {supplier[4]} | Bidding Price: {supplier[5]}"
-            supplier_label = Label(text=supplier_info)
-            layout.add_widget(supplier_label)
-
-        content.add_widget(layout)
-        popup = Popup(title="Supplier Marketplace", content=content, size_hint=(0.85, 0.75))
-        popup.open()
-
-    def approve_best_supplier(self):
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM suppliers ORDER BY bidding_price ASC LIMIT 1")
-        best_supplier = cursor.fetchone()
-
-        if best_supplier:
-            cursor.execute("INSERT INTO contracts (supplier_id, status, contract_date) VALUES (?, ?, ?)", (best_supplier[0], 'Approved', datetime.now().strftime('%Y-%m-%d')))
+        
+        try:
+            cursor.execute("INSERT INTO inventory (item_name, stock, condition, rfid_tag) VALUES (?, ?, ?, ?)",
+                           (item_name, stock, condition, rfid_tag))
             conn.commit()
-            self.show_popup("Success", f"Contract approved with: {best_supplier[1]}")
-        else:
-            self.show_popup("No Suppliers", "No suppliers found")
+            self.show_popup("Item Added", "Item has been added successfully!")
+        except sqlite3.Error as e:
+            self.show_popup("Error", str(e))
+        finally:
+            conn.close()
 
+    def view_inventory(self):
+        conn = sqlite3.connect('inventory.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM inventory")
+        items = cursor.fetchall()
         conn.close()
+        
+        # Display items in some UI component
+        # Assuming you have a ListView or similar widget to show items
+        # For demonstration, we'll just print the items
+        for item in items:
+            print(item)
 
-    def show_popup(self, title, content):
-        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
-        popup.open()
-
-# Reporting Screen
-class ReportingScreen(Screen):
-    def generate_reports(self):
-        df = generate_reports()
-        data_view = ScrollView()
-        layout = GridLayout(cols=1, padding=10, size_hint_y=None)
-        layout.bind(minimum_height=layout.setter('height'))
-        for index, row in df.iterrows():
-            report_label = Label(text=f"Date: {index.date()} | TV Screens: {row['TV Screens']} | Computers: {row['Computers']} | Laptops: {row['Laptops']} | Smartphones: {row['Smartphones']}")
-            layout.add_widget(report_label)
-        data_view.add_widget(layout)
-
-        report_graph = Widget()
-        img = BytesIO(open("report_graph.png", 'rb').read())
-        report_image = Image(texture=ImageLoaderPygame().load(img))
-        layout.add_widget(report_image)
-
-        popup = Popup(title="Inventory Report", content=data_view, size_hint=(0.85, 0.75))
-        popup.open()
-
-    def print_report(self):
-        # Placeholder logic for printing
-        self.show_popup("Print Report", "Report sent to printer successfully!")
-
-    def show_popup(self, title, content):
-        popup = Popup(title=title, content=Label(text=content), size_hint=(0.75, 0.5))
-        popup.open()
-
-# Main Application Class
+# Main App class
 class InventoryApp(App):
     def build(self):
-        init_db()
-        load_suppliers()
-        load_sample_inventory()
-
         sm = ScreenManager()
         sm.add_widget(LoginScreen(name='login'))
         sm.add_widget(RegisterScreen(name='register'))
         sm.add_widget(ManageInventoryScreen(name='inventory'))
-        sm.add_widget(SupplierMarketplaceScreen(name='suppliers'))
-        sm.add_widget(ReportingScreen(name='reporting'))
-
         return sm
 
 if __name__ == '__main__':
+    init_db()
+    load_suppliers()
+    load_sample_inventory()
     InventoryApp().run()
